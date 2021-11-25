@@ -3,3 +3,48 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100vh;
+    display: flex;;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    row-gap: 1rem;
+}
+
+.message {
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.board {
+    width: 50vmin;
+    height: 50vmin;
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+}
+
+.row {
+    flex: 1;
+    display: flex;
+    column-gap: 1rem;
+}
+
+.cell {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 5rem;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: coral;
+    transition: background-color .5s;
+}
+
+.cell.win {
+    background-color: darkseagreen;
+}
