@@ -1,14 +1,144 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TIC TAC TOE | Odin Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap">
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" 
+          integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1 class="message">&nbsp;</h1>
-    <div class="board"></div>
+    <header>
+        <div class="container">
+            <h1 class="logo">TIC - TAC - TOE</h1>
+        </div><!-- .container -->
+    </header>
+    <main>
+        <div class="container v-center">
+            <form id="game-settings" class="form" action="#">
+                <div class="form-field">
+                    <label for="player-x-name">Player X name</label>
+                    <input type="text"
+                           name="player-x-name"
+                           id="player-x-name"
+                           maxlength="16"
+                           placeholder="Player 1"
+                           autocomplete="off"
+                           autofocus>
+                    <p class="note">Max 16 characters</p>
+                </div><!-- .form-field -->
+                <div class="form-field">
+                    <label for="player-o-name">Player O name</label>
+                    <input type="text"
+                           name="player-o-name"
+                           id="player-o-name"
+                           maxlength="16"
+                           placeholder="Player 2"
+                           autocomplete="off">
+                    <p class="note">Max 16 characters</p>
+                </div><!-- .form-field -->
+                <div class="form-field">
+                    <label>Board size</label>
+                    <div class="radios">
+                        <input type="radio" name="board-size" id="3x3" value="3" checked>
+                        <label for="3x3" class="button">3x3</label>
+                        <input type="radio" name="board-size" id="4x4" value="4">
+                        <label for="4x4" class="button">4x4</label>
+                        <input type="radio" name="board-size" id="5x5" value="5">
+                        <label for="5x5" class="button">5x5</label>
+                    </div><!-- .radios -->
+                </div><!-- .form-field -->
+                <div class="form-field">
+                    <button class="button">Start game</button>
+                </div><!-- .form-field -->
+            </form>
+
+            <div id="game-container" class="hide">
+                <div class="player-info top">
+                    <div class="left-info">
+                    </div><!-- .left-info -->
+                    <div class="right-info">
+                    </div><!-- .right-info -->
+                    <p class="note">Tap to open in-game menu</p>
+                </div><!-- .player-info.top -->
+                <div class="board-container">
+                    <div class="board"></div><!-- .board -->
+                </div><!-- .board-container -->
+                <div class="player-info bottom active">
+                    <div class="left-info">
+                    </div><!-- .left-info -->
+                    <div class="right-info">
+                    </div><!-- .right-info -->
+                    <p class="note">Tap to open in-game menu</p>
+                </div><!-- .player-info.bottom -->
+                <div class="options">
+                    <button class="button clear-board">
+                        <span><i class="fas fa-eraser"></i></span>
+                        <span>Clear board</span>
+                    </button>
+                    <button class="button new-game">
+                        <span><i class="fas fa-plus"></i></span>
+                        <span>New Game</span>
+                    </button>
+                </div><!-- .options -->
+            </div><!-- #game-container -->
+        </div><!-- .container -->
+    </main>
+    <footer> 
+        <div class="container">
+            <a href="https://github.com/dragi-ns/odin-project-ttt" target="_blank">
+                <span>
+                    <i class="fab fa-lg fa-github"></i>
+                </span>
+                <span>
+                    dragi-ns
+                </span>
+            </a>
+        </div><!-- .container -->
+    </footer>
+    <div id="round-status" class="modal">
+        <div class="modal-card">
+            <div class="modal-header"></div><!-- .modal-header -->
+            <div class="modal-actions">
+                <button class="button continue-game">
+                    <span><i class="fas fa fa-redo-alt"></i></span>
+                    <span>Continue</span>
+                </button>
+                <button class="button new-game">
+                    <span><i class="fas fa-plus"></i></span>
+                    <span>New Game</span>
+                </button>
+            </div><!-- .modal-actions -->
+        </div><!-- .modal-card -->
+    </div><!-- #round-status -->
+
+    <div id="in-game-options" class="modal">
+        <div class="modal-card">
+            <span class="close-button">
+                <i class="fas fa-lg fa-times"></i>
+            </span>
+            <div class="modal-header">
+                IN-GAME OPTIONS
+            </div><!-- .modal-header -->
+            <div class="modal-actions">
+                <button class="button clear-board">
+                    <span><i class="fas fa-eraser"></i></span>
+                    <span>Clear board</span>
+                </button>
+                <button class="button new-game">
+                    <span><i class="fas fa-plus"></i></span>
+                    <span>New Game</span>
+                </button>
+            </div><!-- .modal-actions -->
+        </div><!-- .modal-card -->
+    </div><!-- #in-game-options -->
     <script src="script.js"></script>
 </body>
 </html>

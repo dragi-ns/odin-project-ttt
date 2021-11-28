@@ -4,33 +4,204 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: Arial, Helvetica, sans-serif;
-    height: 100vh;
-    display: flex;;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    row-gap: 1rem;
+:root {
+    --jonquil: #f3ca20;
+    --black: #000000;
+    --cell-hover: rgba(0, 0, 0, .1);
+    --cell-win: #6B984B;
+    --modal-background: rgba(0, 0, 0, .7);
+
+    user-select: none;
+    height: -webkit-fill-available;
 }
 
-.message {
-    text-transform: uppercase;
+body {
+    font-family: 'Rubik', sans-serif;
+    height: 100vh;
+    height: -webkit-fill-available;
+    display: flex;;
+    flex-direction: column;
+    row-gap: 1.5rem;
+    background-color: var(--jonquil);
+    color: var(--black);
+    overflow-x: hidden;
+}
+
+header,
+footer {
+    color: var(--jonquil);
+    background-color: var(--black);
+    text-align: center;
+}
+
+header {
+    padding: .25rem 0;
+}
+
+header .logo {
+    font-size: 2.5rem;
+    letter-spacing: .15rem;
+}
+
+footer {
+    padding: .75rem 0;
+    font-size: 1rem;
+}
+
+footer a {
+    color: inherit;
+    text-decoration: none;
+}
+
+main {
+    flex: 1;
+    padding: 0 1rem;
+}
+
+.clipped {
+    overflow: hidden !important;
+}
+
+.hide {
+    display: none !important;
+}
+
+.container {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.v-center {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.note {
+    font-size: .8rem;
+    font-weight: normal;
+}
+
+.note::before {
+    content: "Note: ";
     font-weight: bold;
 }
 
-.board {
-    width: 50vmin;
-    height: 50vmin;
+.form,
+.form-field {
     display: flex;
     flex-direction: column;
+}
+
+#game-settings {
+    max-width: 640px;
+}
+
+.form {
+    flex: 1;
     row-gap: 1rem;
+}
+
+.form-field {
+    text-transform: uppercase;
+    row-gap: .5rem;
+}
+
+.form-field label {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.form-field label[for],
+.button {
+    cursor: pointer;
+}
+
+.form-field input:not([type="radio"]),
+.form-field .radios label,
+.button {
+    color: var(--black);
+    border-radius: 0;
+    background-color: var(--jonquil);
+    border: .25rem solid var(--black);
+    padding: .5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all .2s;;
+}
+
+.button:hover,
+.button:focus,
+.form-field input:not([type="radio"]):focus,
+.form-field .radios label:hover,
+.form-field .radios input[type="radio"]:checked + label {
+    outline: 0;
+    color: var(--jonquil);
+    background-color: var(--black);
+}
+
+.form-field .radios {
+    display: flex;
+    justify-content: space-between;
+    column-gap: 1rem;
+}
+
+.form-field .radios label {
+    flex: 1;
+    text-align: center;
+    letter-spacing: .25rem;
+}
+
+.form-field .radios input {
+    position: absolute;
+    opacity: 0;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    row-gap: 1rem;
+}
+
+.board-container {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.board {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .row {
     flex: 1;
     display: flex;
-    column-gap: 1rem;
+    position: relative;
+}
+
+.row:not(:last-child)::after {
+    content: "";
+    width: 0%;
+    position: absolute;
+    bottom: 0;
+    z-index: 10;
+    border-bottom: .25rem solid var(--black);
+    transition: width .350s;
+}
+
+.board.active .row:not(:last-child)::after {
+    width: 100%;
 }
 
 .cell {
@@ -38,13 +209,255 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 5rem;
+    position: relative;
     font-weight: bold;
+    transition: all .5s;
+}
+
+.board.active .cell {
     cursor: pointer;
-    background-color: coral;
-    transition: background-color .5s;
+}
+
+.board.active .cell:hover {
+    background-color: var(--cell-hover);
+}
+
+.cell:not(:last-child)::after {
+    content: "";
+    height: 0%;
+    top: 0;
+    right: -.25rem;
+    position: absolute;
+    z-index: 10;
+    border-right: .25rem solid var(--black);
+    transition: height .350s;
+}
+
+.board.active .cell:not(:last-child)::after {
+    height: 100%;
 }
 
 .cell.win {
-    background-color: darkseagreen;
+    background-color: var(--cell-win);
+}
+
+.player-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: .25rem;
+    font-size: 1.2rem;
+    padding: .5rem;
+    border: .25rem solid var(--black);
+    transition: color, background-color .2s;
+}
+
+.player-info .left-info::before {
+    font-family: 'Font Awesome 5 Free';
+    content: '\f007';
+    margin-right: .5rem;
+}
+
+.player-info .note {
+    text-align: center;
+    flex: 1 0 100%;
+}
+
+.player-info.top > * {
+    transform: rotate(180deg);
+}
+
+.player-info.top .left-info {
+    order: 3;
+}
+
+.player-info.top .right-info {
+    order: 2;
+}
+
+.player-info.top .note {
+    order: 1;
+}
+
+.player-info.active {
+    font-weight: bold;
+    color: var(--jonquil);
+    background-color: var(--black);
+}
+
+#game-container .options {
+    display: none;
+    order: 3;
+    column-gap: .5rem;
+    align-self: flex-start;
+}
+
+#game-container .options .button {
+    font-size: 1.2rem;
+}
+
+.modal {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    background-color: var(--modal-background);
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-card {
+    padding: 1rem;
+    max-width: 640px;
+    background-color: var(--jonquil);
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+    position: relative;
+}
+
+.modal-card .close-button {
+    position: absolute;
+    padding: .25rem;
+    cursor: pointer;
+}
+
+.modal-card.top > * {
+    transform: rotate(180deg);
+}
+
+.modal-card.top .close-button {
+    left: 0;
+    bottom: 0;
+}
+
+.modal-card.top .modal-header {
+    order: 2;
+}
+
+.modal-card.top .modal-actions {
+    order: 1;
+}
+
+.modal-card:not(.top) .close-button {
+    right: 0;
+    top: 0;
+}
+
+.modal-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    column-gap: 1rem;
+    justify-content: space-evenly;
+}
+
+@media screen and (min-width: 769px) {
+    :root {
+        font-size: 17px;
+    }
+
+    header .logo {
+        font-size: 3rem;
+    }
+
+    .container,
+    .form {
+        max-width: 720px;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    :root {
+        font-size: 18px;
+    }
+
+    .container {
+        max-width: 960px;
+    }
+
+    #game-container {
+        max-height: 960px;
+        flex-direction: row;
+        column-gap: .5rem;
+    }
+
+    .board-container {
+        order: 1;
+        flex: 1 1 100%;
+        height: 85%;
+    }
+
+    #game-container .options {
+        display: flex;
+    }
+
+    .player-info {
+        flex: 1;
+        align-self: flex-start;
+    }
+
+    .player-info .note {
+        display: none;
+    }
+
+    .player-info.bottom {
+        order: 2;
+    }
+
+    .player-info.top {
+        order: 4;
+    }
+
+    .player-info.top > * {
+        transform: rotate(0);
+    }
+
+    .player-info.top .left-info {
+        order: 1;
+    }
+
+    .player-info.top .right-info {
+        order: 2;
+    }
+}
+
+@media screen and (min-width: 1216px) {
+    :root {
+        font-size: 19px;
+    }
+
+    .container {
+        max-width: 1152px;
+    }
+
+    #game-container {
+        max-height: 1152px;
+    }
+}
+
+@media screen and (min-width: 1408px) {
+    :root {
+        font-size: 20px;
+    }
+
+    .container {
+        max-width: 1344px;
+    }
+
+    #game-container {
+        max-height: 1344px;
+    }
 }
