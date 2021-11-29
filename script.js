@@ -38,8 +38,7 @@
             ]
         },
         TIMING: {
-            duration: 250,
-            composite: 'accumulate'
+            duration: 250
         }
     };
     const FADE_ANIMATIONS = {
