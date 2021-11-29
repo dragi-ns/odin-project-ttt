@@ -141,7 +141,11 @@
     );
     inGameMenuModalCloseButton.addEventListener(
         'click',
-        hideModal.bind(null, inGameMenuModal, inGameMenuModalCard)
+        debounce(
+            closeModal.bind(null, inGameMenuModal, inGameMenuModalCard),
+            500,
+            true
+        )
     );
     inGameMenuModalActionClearBoard.addEventListener(
         'click',
@@ -179,10 +183,8 @@
         if (!state.boardController) {
             return;
         }
-
         togglePlayerContainerEventListener();
         toggleHeaderFooterVisibility();
-
         adjustCellFontSize();
     }
 
@@ -205,7 +207,7 @@
             inGameMenuModalCard.classList.remove('top');
         }
 
-        showModal(inGameMenuModal, inGameMenuModalCard);
+        openModal(inGameMenuModal, inGameMenuModalCard);
     }
 
     function toggleHeaderFooterVisibility() {
@@ -240,6 +242,8 @@
             parseFloat(currentCellSize.width),
             parseFloat(currentCellSize.height)
         );
+        // TODO: Do I really need to loop over every cell?
+        //       Maybe set a css variable with this new min size?
         state.cellElements.forEach((cellElement) => {
             cellElement.style.fontSize = `${(65 / 100) * minSize}px`;
             const cellElementSpan = cellElement.children[0];
@@ -250,7 +254,7 @@
     }
 
     function handleGameSettingsForm() {
-        if (state.boardController) {
+        if (state.boardController !== null) {
             return;
         }
 
@@ -270,7 +274,6 @@
         state.boardController = Board(boardSideSize);
         state.playerX = Player(playerXName, 'X');
         state.playerO = Player(playerOName, 'O');
-        state.currentPlayer = state.playerX;
 
         startGame();
     }
@@ -322,8 +325,25 @@
         playerBottomScore.textContent = state.playerX.getScore();
     }
 
+    function updateActivePlayer(reset = false) {
+        if (!reset) {
+            state.currentPlayer = (
+                state.currentPlayer === state.playerX ? state.playerO : state.playerX
+            );
+        } else {
+            state.currentPlayer = state.playerX;
+        }
+        if (state.currentPlayer === state.playerX) {
+            playerTopContainer.classList.remove('active');
+            playerBottomContainer.classList.add('active');
+        } else {
+            playerBottomContainer.classList.remove('active');
+            playerTopContainer.classList.add('active');
+        }
+    }
+
     async function hideLandingElements() {
-        const animationQueue = [
+        const animationTasks = [
             gameSettingsForm.animate(
                 SLIDE_ANIMATIONS.OUT.RIGHT,
                 SLIDE_ANIMATIONS.TIMING
@@ -331,7 +351,7 @@
         ];
 
         if (mobileBreakpoint()) {
-            animationQueue.push(
+            animationTasks.push(
                 header.animate(
                     SLIDE_ANIMATIONS.OUT.TOP,
                     SLIDE_ANIMATIONS.TIMING
@@ -343,12 +363,12 @@
             );
         }
 
-        const animations = await Promise.all(animationQueue);
+        const animations = await Promise.all(animationTasks);
         animations.forEach((animation) => hideElement(animation.effect.target));
     }
 
     async function showInGameElements() {
-        const animationQueue = [
+        const animationTasks = [
             playerTopContainer.animate(
                 SLIDE_ANIMATIONS.IN.RIGHT,
                 SLIDE_ANIMATIONS.TIMING
@@ -361,7 +381,7 @@
 
         if (!mobileBreakpoint()) {
             showElement(gameContainerOptions);
-            animationQueue.push(
+            animationTasks.push(
                 gameContainerOptions.animate(
                     SLIDE_ANIMATIONS.IN.BOTTOM,
                     SLIDE_ANIMATIONS.TIMING
@@ -371,7 +391,7 @@
 
         showElement(gameContainer);
         adjustCellFontSize();
-        await Promise.all(animationQueue);
+        await Promise.all(animationTasks);
         board.classList.add('active');
     }
 
@@ -393,11 +413,8 @@
         const coordinates = state.boardController.cellNumberToCoordinates(
             targetCell.dataset.cellNumber
         );
-        if (!coordinates) {
-            return;
-        }
-
-        if (!state.boardController.makeMove(coordinates, state.currentPlayer.getMark())) {
+        if (!coordinates
+            || !state.boardController.makeMove(coordinates, state.currentPlayer.getMark())) {
             return;
         }
 
@@ -449,30 +466,13 @@
         }
     }
 
-    function updateActivePlayer(reset = false) {
-        if (!reset) {
-            state.currentPlayer = (
-                state.currentPlayer === state.playerX ? state.playerO : state.playerX
-            );
-        } else {
-            state.currentPlayer = state.playerX;
-        }
-        if (state.currentPlayer === state.playerX) {
-            playerTopContainer.classList.remove('active');
-            playerBottomContainer.classList.add('active');
-        } else {
-            playerBottomContainer.classList.remove('active');
-            playerTopContainer.classList.add('active');
-        }
-    }
-
     async function showRoundStatusModal(headerText) {
         roundStatusModalHeader.textContent = headerText;
-        showModal(roundStatusModal, roundStatusModalCard);
+        openModal(roundStatusModal, roundStatusModalCard);
         roundStatusModalActionContinue.focus();
     }
 
-    async function showModal(modal, modalCard) {
+    async function openModal(modal, modalCard) {
         root.classList.add('clipped');
         modal.classList.add('active');
         Promise.all([
@@ -488,14 +488,13 @@
     }
 
     function handleRoundStatusModalActionContinue() {
-        hideModal(roundStatusModal, roundStatusModalCard);
-        state.boardController.clearBoard();
+        closeModal(roundStatusModal, roundStatusModalCard);
         clearBoard();
         updateActivePlayer(true);
         board.addEventListener('click', boardDebounceFunction);
     }
 
-    async function hideModal(modal, modalCard) {
+    async function closeModal(modal, modalCard) {
         await Promise.all([
             modal.animate(
                 FADE_ANIMATIONS.OUT,
@@ -511,6 +510,7 @@
     }
 
     function clearBoard() {
+        state.boardController.clearBoard();
         state.cellElements.forEach((cellElement) => {
             const cellElementSpan = cellElement.children[0];
             cellElement.classList.remove('marked', 'win');
@@ -523,13 +523,13 @@
     }
 
     function handleRoundStatusModalActionNewGame() {
-        hideModal(roundStatusModal, roundStatusModalCard);
+        closeModal(roundStatusModal, roundStatusModalCard);
         endGame();
     }
 
     async function endGame() {
         await hideInGameElements();
-        await showLandingElements();
+        showLandingElements();
         tearDownBoard();
         state.boardController = null;
         state.playerX = null;
@@ -538,7 +538,7 @@
     }
 
     async function hideInGameElements() {
-        const animationQueue = [
+        const animationTasks = [
             playerTopContainer.animate(
                 SLIDE_ANIMATIONS.OUT.RIGHT,
                 SLIDE_ANIMATIONS.TIMING
@@ -550,7 +550,7 @@
         ];
 
         if (!mobileBreakpoint()) {
-            animationQueue.push(
+            animationTasks.push(
                 gameContainerOptions.animate(
                     SLIDE_ANIMATIONS.OUT.BOTTOM,
                     SLIDE_ANIMATIONS.TIMING
@@ -561,20 +561,12 @@
 
         clearBoard();
         board.classList.remove('active');
-        await Promise.all(animationQueue);
+        await Promise.all(animationTasks);
         hideElement(gameContainer);
     }
 
-    function tearDownBoard() {
-        // TODO: Maybe don't remove all board cells when the user
-        // selectes new game.
-        const rowElements = board.querySelectorAll('.row');
-        rowElements.forEach((rowElement) => rowElement.remove());
-        state.cellElements = [];
-    }
-
     async function showLandingElements() {
-        const animationQueue = [
+        const animationTasks = [
             gameSettingsForm.animate(
                 SLIDE_ANIMATIONS.IN.LEFT,
                 SLIDE_ANIMATIONS.TIMING
@@ -584,7 +576,7 @@
         if (mobileBreakpoint()) {
             showElement(header);
             showElement(footer);
-            animationQueue.push(
+            animationTasks.push(
                 header.animate(
                     SLIDE_ANIMATIONS.IN.TOP,
                     SLIDE_ANIMATIONS.TIMING
@@ -597,11 +589,16 @@
         }
 
         showElement(gameSettingsForm);
-        await Promise.all(animationQueue);
+        Promise.all(animationTasks);
+    }
+
+    function tearDownBoard() {
+        const rowElements = board.querySelectorAll('.row');
+        rowElements.forEach((rowElement) => rowElement.remove());
+        state.cellElements = [];
     }
 
     function handleGameContainerOptionResetBoard() {
-        state.boardController.clearBoard();
         clearBoard();
         updateActivePlayer(true);
     }
@@ -611,20 +608,18 @@
     }
 
     function handleInGameMenuModalActionResetBoard() {
-        hideModal(inGameMenuModal, inGameMenuModalCard);
-        state.boardController.clearBoard();
+        closeModal(inGameMenuModal, inGameMenuModalCard);
         clearBoard();
         updateActivePlayer(true);
     }
 
     function handleInGameMenuModalActionNewGame() {
-        hideModal(inGameMenuModal, inGameMenuModalCard);
+        closeModal(inGameMenuModal, inGameMenuModalCard);
         endGame();
     }
 }());
 
 function Board(sideSize) {
-    // TODO: Add an option for board resizing
     let turnCount = 0;
     const board = [];
     const totalSize = sideSize * sideSize;
