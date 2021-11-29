@@ -76,6 +76,7 @@
     const footer = document.querySelector('footer');
 
     const gameSettingsForm = document.querySelector('#game-settings');
+    const startGameButton = gameSettingsForm.querySelector('.start-game');
 
     const gameContainer = document.querySelector('#game-container');
     const gameContainerOptions = gameContainer.querySelector('.options');
@@ -104,6 +105,7 @@
     const inGameMenuModalActionClearBoard = inGameMenuModal.querySelector('.clear-board');
     const inGameMenuModalActionNewGame = inGameMenuModal.querySelector('.new-game');
 
+    // GAME VARIABLES
     const state = {
         boardController: null,
         playerX: null,
@@ -112,28 +114,30 @@
         cellElements: []
     };
 
+    const playerContainerDebounceFunction = debounce(handlePlayerContainer, 500, true);
+    const boardDebounceFunction = debounce(handleBoardClick, 150, true);
+
     // EVENT LISTENERS
     window.addEventListener('resize', debounce(handleWindowResize, 250));
-    gameSettingsForm.addEventListener('submit', handleGameSettingsForm);
+    startGameButton.addEventListener(
+        'click',
+        debounce(handleGameSettingsForm, 500, true)
+    );
     gameContainerOptionClearBoard.addEventListener(
         'click',
-        handleGameContainerOptionResetBoard,
-        { once: true }
+        debounce(handleGameContainerOptionResetBoard, 500, true)
     );
     gameContainerOptionNewGame.addEventListener(
         'click',
-        handleGameContainerOptionNewGame,
-        { once: true }
+        debounce(handleGameContainerOptionNewGame, 500, true)
     );
     roundStatusModalActionContinue.addEventListener(
         'click',
-        handleRoundStatusModalActionContinue,
-        { once: true }
+        debounce(handleRoundStatusModalActionContinue, 500, true)
     );
     roundStatusModalActionNewGame.addEventListener(
         'click',
-        handleRoundStatusModalActionNewGame,
-        { once: true }
+        debounce(handleRoundStatusModalActionNewGame, 500, true)
     );
     inGameMenuModalCloseButton.addEventListener(
         'click',
@@ -141,28 +145,33 @@
     );
     inGameMenuModalActionClearBoard.addEventListener(
         'click',
-        handleInGameMenuModalActionResetBoard,
-        { once: true }
+        debounce(handleInGameMenuModalActionResetBoard, 500, true)
     );
     inGameMenuModalActionNewGame.addEventListener(
         'click',
-        handleInGameMenuModalActionNewGame,
-        { once: true }
+        debounce(handleInGameMenuModalActionNewGame, 500, true)
     );
 
     togglePlayerContainerEventListener();
 
     // Good explanation of debounce function - https://www.youtube.com/watch?v=LZb_Bv81vQs
-    function debounce(fn, delay) {
+    // https://css-tricks.com/debouncing-throttling-explained-examples/
+    function debounce(fn, delay, leading = false) {
         let timeoutID = null;
         return (...args) => {
+            const shouldCallNow = leading && !timeoutID;
             if (timeoutID) {
                 clearTimeout(timeoutID);
             }
-
             timeoutID = setTimeout(() => {
-                fn(...args);
+                timeoutID = null;
+                if (!leading) {
+                    fn(...args);
+                }
             }, delay);
+            if (shouldCallNow) {
+                fn(...args);
+            }
         };
     }
 
@@ -179,11 +188,11 @@
 
     function togglePlayerContainerEventListener() {
         if (mobileBreakpoint()) {
-            playerTopContainer.addEventListener('click', handlePlayerContainer);
-            playerBottomContainer.addEventListener('click', handlePlayerContainer);
+            playerTopContainer.addEventListener('click', playerContainerDebounceFunction);
+            playerBottomContainer.addEventListener('click', playerContainerDebounceFunction);
         } else {
-            playerTopContainer.removeEventListener('click', handlePlayerContainer);
-            playerBottomContainer.removeEventListener('click', handlePlayerContainer);
+            playerTopContainer.removeEventListener('click', playerContainerDebounceFunction);
+            playerBottomContainer.removeEventListener('click', playerContainerDebounceFunction);
         }
     }
 
@@ -240,9 +249,7 @@
         });
     }
 
-    function handleGameSettingsForm(event) {
-        event.preventDefault();
-
+    function handleGameSettingsForm() {
         if (state.boardController) {
             return;
         }
@@ -286,7 +293,7 @@
         updateActivePlayer(true);
         await hideLandingElements();
         await showInGameElements();
-        board.addEventListener('click', handleBoardClick);
+        board.addEventListener('click', boardDebounceFunction);
     }
 
     function generateBoardCells() {
@@ -377,6 +384,11 @@
         } else {
             return;
         }
+
+        if (targetCell.classList.contains('marked')) {
+            return;
+        }
+        targetCell.classList.add('marked');
 
         const coordinates = state.boardController.cellNumberToCoordinates(
             targetCell.dataset.cellNumber
@@ -480,12 +492,7 @@
         state.boardController.clearBoard();
         clearBoard();
         updateActivePlayer(true);
-        board.addEventListener('click', handleBoardClick);
-        roundStatusModalActionContinue.addEventListener(
-            'click',
-            handleRoundStatusModalActionContinue,
-            { once: true }
-        );
+        board.addEventListener('click', boardDebounceFunction);
     }
 
     async function hideModal(modal, modalCard) {
@@ -506,7 +513,7 @@
     function clearBoard() {
         state.cellElements.forEach((cellElement) => {
             const cellElementSpan = cellElement.children[0];
-            cellElement.classList.remove('win');
+            cellElement.classList.remove('marked', 'win');
             cellElementSpan.animate(
                 ZOOM_ANIMATIONS.OUT,
                 ZOOM_ANIMATIONS.TIMING
@@ -518,11 +525,6 @@
     function handleRoundStatusModalActionNewGame() {
         hideModal(roundStatusModal, roundStatusModalCard);
         endGame();
-        roundStatusModalActionNewGame.addEventListener(
-            'click',
-            handleRoundStatusModalActionNewGame,
-            { once: true }
-        );
     }
 
     async function endGame() {
@@ -602,20 +604,10 @@
         state.boardController.clearBoard();
         clearBoard();
         updateActivePlayer(true);
-        gameContainerOptionClearBoard.addEventListener(
-            'click',
-            handleGameContainerOptionResetBoard,
-            { once: true }
-        );
     }
 
     function handleGameContainerOptionNewGame() {
         endGame();
-        gameContainerOptionNewGame.addEventListener(
-            'click',
-            handleGameContainerOptionNewGame,
-            { once: true }
-        );
     }
 
     function handleInGameMenuModalActionResetBoard() {
@@ -623,21 +615,11 @@
         state.boardController.clearBoard();
         clearBoard();
         updateActivePlayer(true);
-        inGameMenuModalActionClearBoard.addEventListener(
-            'click',
-            handleInGameMenuModalActionResetBoard,
-            { once: true }
-        );
     }
 
     function handleInGameMenuModalActionNewGame() {
         hideModal(inGameMenuModal, inGameMenuModalCard);
         endGame();
-        inGameMenuModalActionNewGame.addEventListener(
-            'click',
-            handleInGameMenuModalActionNewGame,
-            { once: true }
-        );
     }
 }());
 
