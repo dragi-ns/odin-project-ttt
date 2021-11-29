@@ -237,7 +237,7 @@ main {
     height: 100%;
 }
 
-.cell.win {
+.board.active .cell.win {
     background-color: var(--cell-win);
 }
 
