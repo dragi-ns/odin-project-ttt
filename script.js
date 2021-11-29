@@ -113,7 +113,7 @@
     };
 
     // EVENT LISTENERS
-    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('resize', debounce(handleWindowResize, 250));
     gameSettingsForm.addEventListener('submit', handleGameSettingsForm);
     gameContainerOptionClearBoard.addEventListener(
         'click',
@@ -151,6 +151,20 @@
     );
 
     togglePlayerContainerEventListener();
+
+    // Good explanation of debounce function - https://www.youtube.com/watch?v=LZb_Bv81vQs
+    function debounce(fn, delay) {
+        let timeoutID = null;
+        return (...args) => {
+            if (timeoutID) {
+                clearTimeout(timeoutID);
+            }
+
+            timeoutID = setTimeout(() => {
+                fn(...args);
+            }, delay);
+        };
+    }
 
     function handleWindowResize() {
         if (!state.boardController) {
