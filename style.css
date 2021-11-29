@@ -258,6 +258,10 @@ main {
     margin-right: .5rem;
 }
 
+.player-info .left-info {
+    text-transform: uppercase;
+}
+
 .player-info .note {
     text-align: center;
     flex: 1 0 100%;
@@ -294,6 +298,10 @@ main {
 
 #game-container .options .button {
     font-size: 1.2rem;
+}
+
+#game-container .options .button span:last-child {
+    display: none
 }
 
 .modal {
@@ -445,6 +453,10 @@ main {
 
     #game-container {
         max-height: 1152px;
+    }
+
+    #game-container .options .button span:last-child {
+        display: inline;
     }
 }
 
