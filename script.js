@@ -297,6 +297,7 @@
         await hideLandingElements();
         await showInGameElements();
         board.addEventListener('click', boardDebounceFunction);
+        board.addEventListener('keydown', boardDebounceFunction);
     }
 
     function generateBoardCells() {
@@ -308,6 +309,7 @@
             rowData.forEach((cellData) => {
                 const cellElement = document.createElement('div');
                 cellElement.classList.add('cell');
+                cellElement.setAttribute('tabindex', '0');
                 cellElement.dataset.cellNumber = cellNumber++;
                 cellElement.innerHTML = `<span>${cellData}<span>`;
                 rowElement.appendChild(cellElement);
@@ -396,6 +398,10 @@
     }
 
     function handleBoardClick(event) {
+        if (event.type !== 'click' && (event.type !== 'keydown' || event.key !== 'Enter')) {
+            return;
+        }
+
         let targetCell = null;
         if (event.target.classList.contains('cell')) {
             targetCell = event.target;
@@ -468,14 +474,14 @@
 
     async function showRoundStatusModal(headerText) {
         roundStatusModalHeader.textContent = headerText;
-        openModal(roundStatusModal, roundStatusModalCard);
+        await openModal(roundStatusModal, roundStatusModalCard);
         roundStatusModalActionContinue.focus();
     }
 
     async function openModal(modal, modalCard) {
         root.classList.add('clipped');
         modal.classList.add('active');
-        Promise.all([
+        await Promise.all([
             modal.animate(
                 FADE_ANIMATIONS.IN,
                 FADE_ANIMATIONS.TIMING
@@ -492,6 +498,7 @@
         clearBoard();
         updateActivePlayer(true);
         board.addEventListener('click', boardDebounceFunction);
+        board.addEventListener('keydown', boardDebounceFunction);
     }
 
     async function closeModal(modal, modalCard) {
