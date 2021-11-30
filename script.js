@@ -240,15 +240,8 @@
             parseFloat(currentCellSize.width),
             parseFloat(currentCellSize.height)
         );
-        // TODO: Do I really need to loop over every cell?
-        //       Maybe set a css variable with this new min size?
-        state.cellElements.forEach((cellElement) => {
-            cellElement.style.fontSize = `${(65 / 100) * minSize}px`;
-            const cellElementSpan = cellElement.children[0];
-            if (cellElementSpan.textContent.length === 0) {
-                cellElementSpan.innerHTML = '&nbsp';
-            }
-        });
+        const cellNewSize = (65 / 100) * minSize;
+        root.style.setProperty('--cell-font-size', `${cellNewSize}px`);
     }
 
     function handleGameSettingsForm() {
@@ -305,12 +298,12 @@
         boardData.forEach((rowData) => {
             const rowElement = document.createElement('div');
             rowElement.classList.add('row');
-            rowData.forEach((cellData) => {
+            rowData.forEach(() => {
                 const cellElement = document.createElement('div');
                 cellElement.classList.add('cell');
                 cellElement.setAttribute('tabindex', '0');
                 cellElement.dataset.cellNumber = cellNumber++;
-                cellElement.innerHTML = `<span>${cellData}<span>`;
+                cellElement.innerHTML = `<span>&nbsp;<span>`;
                 rowElement.appendChild(cellElement);
                 state.cellElements.push(cellElement);
             });
