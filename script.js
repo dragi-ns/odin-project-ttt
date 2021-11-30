@@ -156,8 +156,6 @@
         debounce(handleInGameMenuModalActionNewGame, 500, true)
     );
 
-    togglePlayerContainerEventListener();
-
     // Good explanation of debounce function - https://www.youtube.com/watch?v=LZb_Bv81vQs
     // https://css-tricks.com/debouncing-throttling-explained-examples/
     function debounce(fn, delay, leading = false) {
@@ -296,6 +294,7 @@
         updateActivePlayer(true);
         await hideLandingElements();
         await showInGameElements();
+        togglePlayerContainerEventListener();
         board.addEventListener('click', boardDebounceFunction);
         board.addEventListener('keydown', boardDebounceFunction);
     }
@@ -562,7 +561,6 @@
                     SLIDE_ANIMATIONS.OUT.BOTTOM,
                     SLIDE_ANIMATIONS.TIMING
                 ).finished
-                    .then((animation) => hideElement(animation.effect.target))
             );
         }
 
