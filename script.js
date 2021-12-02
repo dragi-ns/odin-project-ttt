@@ -164,6 +164,8 @@
         debounce(handleInGameMenuModalActionNewGame, 500, true)
     );
 
+    handleGameModeChange();
+
     // Good explanation of debounce function - https://www.youtube.com/watch?v=LZb_Bv81vQs
     // https://css-tricks.com/debouncing-throttling-explained-examples/
     function debounce(fn, delay, leading = false) {
@@ -194,8 +196,6 @@
         adjustCellFontSize();
     }
 
-    // TODO: When I change game mode to 'vs-ai' and soft refresh (not hard refresh) the page
-    //       it will show 'vs-friend' form fields but 'vs-ai' game mode will still be selected
     function handleGameModeChange() {
         if (vsFriendRadio.checked) {
             aiFormFields.forEach(hideElement);
@@ -467,11 +467,14 @@
         const targetCell = state.cellElements.find((cellElement) => {
             return +cellElement.dataset.cellNumber === cellNumber;
         });
-        // TODO: Extract this into "sleep" utility function
+        await sleep(350);
+        markMove(targetCell, coordinates);
+    }
+
+    function sleep(wait) {
         // https://stackoverflow.com/a/39914235
         // eslint-disable-next-line no-promise-executor-return
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        markMove(targetCell, coordinates);
+        return new Promise((resolve) => setTimeout(resolve, wait));
     }
 
     function handleBoardCellSelection(event) {
@@ -520,8 +523,19 @@
             ZOOM_ANIMATIONS.TIMING
         ).finished;
 
-        // TODO: Extract code belowo into a function
+        if (checkForEnd(coordinates)) {
+            return;
+        }
 
+        updateActivePlayer();
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
+    }
+
+    function checkForEnd(coordinates) {
         const winningCoordinates = state.boardController.checkForWinner(
             coordinates,
             state.currentPlayer.getMark()
@@ -540,20 +554,15 @@
 
             updatePlayerScore();
             showRoundStatusModal(`${state.currentPlayer.getFormatedString()} WON!`);
-            return;
+            return true;
         }
 
         if (state.boardController.checkForDraw()) {
             showRoundStatusModal('DRAW!');
-            return;
+            return true;
         }
 
-        updateActivePlayer();
-        if (state.currentPlayer.isBot()) {
-            handleBotMove();
-        } else {
-            enableBoardCellSelection();
-        }
+        return false;
     }
 
     function updatePlayerScore() {
