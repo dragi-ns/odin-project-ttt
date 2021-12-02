@@ -68,6 +68,9 @@
         }
     };
     const MAX_NAME_LENGTH = 16;
+    const VALID_GAME_MODES = ['vs-friend', 'vs-ai'];
+    const VALID_MARKS = ['X', 'O'];
+    const VALID_BOT_DIFFICULTIES = ['easy', 'medium', 'impossible'];
     const VALID_BOARD_SIDE_SIZES = [3, 4, 5];
 
     // ELEMENTS
@@ -76,6 +79,10 @@
     const footer = document.querySelector('footer');
 
     const gameSettingsForm = document.querySelector('#game-settings');
+    const vsFriendRadio = gameSettingsForm.querySelector('#vs-friend');
+    const friendFormFields = gameSettingsForm.querySelectorAll('.form-field.friend');
+    const vsAiRadio = gameSettingsForm.querySelector('#vs-ai');
+    const aiFormFields = gameSettingsForm.querySelectorAll('.form-field.ai');
     const startGameButton = gameSettingsForm.querySelector('.start-game');
 
     const gameContainer = document.querySelector('#game-container');
@@ -115,10 +122,11 @@
     };
 
     const playerContainerDebounceFunction = debounce(handlePlayerContainer, 500, true);
-    const boardDebounceFunction = debounce(handleBoardClick, 150, true);
 
     // EVENT LISTENERS
     window.addEventListener('resize', debounce(handleWindowResize, 250));
+    vsFriendRadio.addEventListener('change', handleGameModeChange);
+    vsAiRadio.addEventListener('change', handleGameModeChange);
     startGameButton.addEventListener(
         'click',
         debounce(handleGameSettingsForm, 500, true)
@@ -186,6 +194,18 @@
         adjustCellFontSize();
     }
 
+    // TODO: When I change game mode to 'vs-ai' and soft refresh (not hard refresh) the page
+    //       it will show 'vs-friend' form fields but 'vs-ai' game mode will still be selected
+    function handleGameModeChange() {
+        if (vsFriendRadio.checked) {
+            aiFormFields.forEach(hideElement);
+            friendFormFields.forEach(showElement);
+        } else if (vsAiRadio.checked) {
+            friendFormFields.forEach(hideElement);
+            aiFormFields.forEach(showElement);
+        }
+    }
+
     function togglePlayerContainerEventListener() {
         if (mobileBreakpoint()) {
             playerTopContainer.addEventListener('click', playerContainerDebounceFunction);
@@ -249,22 +269,66 @@
             return;
         }
 
-        const playerXName = formatPlayerName(
-            gameSettingsForm['player-x-name'].value.trim(),
-            'Player 1'
-        );
-        const playerOName = formatPlayerName(
-            gameSettingsForm['player-o-name'].value.trim(),
-            'Player 2'
-        );
+        const gameMode = gameSettingsForm['game-mode'].value.trim();
+        if (!VALID_GAME_MODES.includes(gameMode)) {
+            return;
+        }
+
+        if (gameMode === 'vs-friend') {
+            const playerXName = formatPlayerName(
+                gameSettingsForm['player-x-name'].value.trim(),
+                'Player 1'
+            );
+            const playerOName = formatPlayerName(
+                gameSettingsForm['player-o-name'].value.trim(),
+                'Player 2'
+            );
+
+            state.playerX = Player(playerXName, 'X');
+            state.playerO = Player(playerOName, 'O');
+        } else {
+            const playerName = formatPlayerName(
+                gameSettingsForm['player-name'].value.trim(),
+                'Player 1'
+            );
+            let playerMark = gameSettingsForm['player-mark'].value.trim();
+            if (!VALID_MARKS.includes(playerMark)) {
+                playerMark = 'X';
+            }
+
+            let botDifficulty = gameSettingsForm['bot-difficulty'].value.trim();
+            if (!VALID_BOT_DIFFICULTIES.includes(botDifficulty)) {
+                botDifficulty = 'medium';
+            }
+            let botName = null;
+            switch (botDifficulty) {
+                case 'easy':
+                    botName = 'Noobot';
+                    break;
+                case 'medium':
+                    botName = 'Rubotium';
+                    break;
+                case 'impossible':
+                    botName = 'Probot';
+                    break;
+                // no default
+            }
+
+            if (playerMark === 'X') {
+                state.playerX = Player(playerName, playerMark);
+                state.playerO = Bot(botName, 'O', botDifficulty);
+            } else {
+                state.playerX = Bot(botName, 'X', botDifficulty);
+                state.playerO = Player(playerName, playerMark);
+            }
+        }
+
         let boardSideSize = +gameSettingsForm['board-size'].value.trim();
         if (Number.isNaN(boardSideSize) || !VALID_BOARD_SIDE_SIZES.includes(boardSideSize)) {
             boardSideSize = 3;
         }
 
         state.boardController = Board(boardSideSize);
-        state.playerX = Player(playerXName, 'X');
-        state.playerO = Player(playerOName, 'O');
 
         startGame();
     }
@@ -288,8 +352,11 @@
         await hideLandingElements();
         await showInGameElements();
         togglePlayerContainerEventListener();
-        board.addEventListener('click', boardDebounceFunction);
-        board.addEventListener('keydown', boardDebounceFunction);
+        if (state.playerX.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function generateBoardCells() {
@@ -389,7 +456,25 @@
         board.classList.add('active');
     }
 
-    function handleBoardClick(event) {
+    function enableBoardCellSelection() {
+        board.addEventListener('click', handleBoardCellSelection);
+        board.addEventListener('keydown', handleBoardCellSelection);
+    }
+
+    async function handleBotMove() {
+        const coordinates = state.currentPlayer.makeMove(state.boardController);
+        const cellNumber = state.boardController.coordinatesToCellNumber(coordinates);
+        const targetCell = state.cellElements.find((cellElement) => {
+            return +cellElement.dataset.cellNumber === cellNumber;
+        });
+        // TODO: Extract this into "sleep" utility function
+        // https://stackoverflow.com/a/39914235
+        // eslint-disable-next-line no-promise-executor-return
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        markMove(targetCell, coordinates);
+    }
+
+    function handleBoardCellSelection(event) {
         if (event.type !== 'click' && (event.type !== 'keydown' || event.key !== 'Enter')) {
             return;
         }
@@ -406,7 +491,6 @@
         if (targetCell.classList.contains('marked')) {
             return;
         }
-        targetCell.classList.add('marked');
 
         const coordinates = state.boardController.cellNumberToCoordinates(
             targetCell.dataset.cellNumber
@@ -416,20 +500,33 @@
             return;
         }
 
-        const targetCellSpan = targetCell.children[0];
-        targetCellSpan.textContent = state.currentPlayer.getMark();
-        targetCellSpan.animate(
+        disableBoardCellSelection();
+
+        markMove(targetCell, coordinates);
+    }
+
+    function disableBoardCellSelection() {
+        board.removeEventListener('click', handleBoardCellSelection);
+        board.removeEventListener('keydown', handleBoardCellSelection);
+    }
+
+    async function markMove(cell, coordinates) {
+        cell.classList.add('marked');
+
+        const cellSpan = cell.children[0];
+        cellSpan.textContent = state.currentPlayer.getMark();
+        await cellSpan.animate(
             ZOOM_ANIMATIONS.IN,
             ZOOM_ANIMATIONS.TIMING
-        );
+        ).finished;
+
+        // TODO: Extract code belowo into a function
 
         const winningCoordinates = state.boardController.checkForWinner(
             coordinates,
             state.currentPlayer.getMark()
         );
         if (winningCoordinates) {
-            board.removeEventListener('click', handleBoardClick);
-
             const winningCellNumbers = winningCoordinates.map(
                 state.boardController.coordinatesToCellNumber
             );
@@ -447,12 +544,16 @@
         }
 
         if (state.boardController.checkForDraw()) {
-            board.removeEventListener('click', handleBoardClick);
             showRoundStatusModal('DRAW!');
             return;
         }
 
         updateActivePlayer();
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function updatePlayerScore() {
@@ -489,8 +590,11 @@
         closeModal(roundStatusModal, roundStatusModalCard);
         clearBoard();
         updateActivePlayer(true);
-        board.addEventListener('click', boardDebounceFunction);
-        board.addEventListener('keydown', boardDebounceFunction);
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     async function closeModal(modal, modalCard) {
@@ -624,8 +728,21 @@ function Board(sideSize) {
 
     initializeBoard();
 
+    const getSideSize = () => sideSize;
     const getBoard = () => board.slice(0);
     const getFlatBoard = () => board.flat();
+
+    function getAvailableCoordinates() {
+        const availableCoordinates = [];
+        for (let i = 0; i < sideSize; ++i) {
+            for (let j = 0; j < sideSize; ++j) {
+                if (board[i][j] === '') {
+                    availableCoordinates.push({ x: i, y: j });
+                }
+            }
+        }
+        return availableCoordinates;
+    }
 
     function initializeBoard() {
         for (let i = 0; i < sideSize; ++i) {
@@ -787,8 +904,10 @@ function Board(sideSize) {
     }
 
     return {
+        getSideSize,
         getBoard,
         getFlatBoard,
+        getAvailableCoordinates,
         clearBoard,
         makeMove,
         cellNumberToCoordinates,
@@ -801,6 +920,7 @@ function Board(sideSize) {
 function Player(name, mark) {
     let score = 0;
 
+    const isBot = () => false;
     const getName = () => name;
     const getMark = () => mark;
     const getScore = () => score;
@@ -809,6 +929,7 @@ function Player(name, mark) {
     const getFormatedString = () => `${name} (${mark})`;
 
     return {
+        isBot,
         getName,
         getMark,
         getScore,
@@ -816,4 +937,44 @@ function Player(name, mark) {
         resetScore,
         getFormatedString
     };
+}
+
+function Bot(name, mark, difficulty) {
+    const isBot = () => true;
+    const getDifficulty = () => difficulty;
+
+    function makeMove(boardController) {
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        if (availableCoordinates.length === 0) {
+            return null;
+        }
+
+        let coordinates = null;
+
+        if (availableCoordinates.length === 1) {
+            // eslint-disable-next-line prefer-destructuring
+            coordinates = availableCoordinates[0];
+        } else {
+            coordinates = availableCoordinates[getRandomNumber(availableCoordinates.length)];
+        }
+
+        boardController.makeMove(coordinates, mark);
+
+        return coordinates;
+    }
+
+    function getRandomNumber(maxNum) {
+        return Math.floor(Math.random() * maxNum);
+    }
+
+    const prototype = Player(name, mark);
+    return Object.assign(
+        {},
+        prototype,
+        {
+            isBot,
+            getDifficulty,
+            makeMove
+        }
+    );
 }
