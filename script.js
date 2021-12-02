@@ -712,6 +712,11 @@
     function handleGameContainerOptionResetBoard() {
         clearBoard();
         updateActivePlayer(true);
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function handleGameContainerOptionNewGame() {
