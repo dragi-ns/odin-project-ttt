@@ -328,6 +328,11 @@
             boardSideSize = 3;
         }
 
+        // DISABLE BOARDS BIGGER THAN 3X3 FOR VS AI FOR NOW
+        if (gameMode === 'vs-ai') {
+            boardSideSize = 3;
+        }
+
         state.boardController = Board(boardSideSize);
 
         startGame();
@@ -468,7 +473,7 @@
             return +cellElement.dataset.cellNumber === cellNumber;
         });
         await sleep(350);
-        markMove(targetCell, coordinates);
+        markMove(targetCell);
     }
 
     function sleep(wait) {
@@ -513,7 +518,7 @@
         board.removeEventListener('keydown', handleBoardCellSelection);
     }
 
-    async function markMove(cell, coordinates) {
+    async function markMove(cell) {
         cell.classList.add('marked');
 
         const cellSpan = cell.children[0];
@@ -523,7 +528,7 @@
             ZOOM_ANIMATIONS.TIMING
         ).finished;
 
-        if (checkForEnd(coordinates)) {
+        if (checkForEnd()) {
             return;
         }
 
@@ -535,11 +540,8 @@
         }
     }
 
-    function checkForEnd(coordinates) {
-        const winningCoordinates = state.boardController.checkForWinner(
-            coordinates,
-            state.currentPlayer.getMark()
-        );
+    function checkForEnd() {
+        const winningCoordinates = state.boardController.checkForWinner();
         if (winningCoordinates) {
             const winningCellNumbers = winningCoordinates.map(
                 state.boardController.coordinatesToCellNumber
@@ -738,6 +740,7 @@
 function Board(sideSize) {
     let turnCount = 0;
     const board = [];
+    const lastMoves = [];
     const totalSize = sideSize * sideSize;
 
     initializeBoard();
@@ -781,8 +784,17 @@ function Board(sideSize) {
             return false;
         }
         board[x][y] = mark;
+        lastMoves.push({ x, y, mark });
         ++turnCount;
         return true;
+    }
+
+    function undoMove() {
+        if (lastMoves.length !== 0) {
+            const lastMove = lastMoves.pop();
+            board[lastMove.x][lastMove.y] = '';
+            --turnCount;
+        }
     }
 
     function validMove({ x, y }) {
@@ -816,28 +828,30 @@ function Board(sideSize) {
         return (x >= 0 && x < sideSize) && (y >= 0 && y < sideSize);
     }
 
-    function checkForWinner({ x, y }, mark) {
+    function checkForWinner() {
         // https://stackoverflow.com/a/1056352
-        if (!shouldCheckForWinner() || !validCoordinates({ x, y })) {
+        if (!shouldCheckForWinner()) {
             return null;
         }
 
-        const winningRowCoordinates = checkRow(x, mark);
+        const lastMove = lastMoves[lastMoves.length - 1];
+
+        const winningRowCoordinates = checkRow(lastMove);
         if (winningRowCoordinates) {
             return winningRowCoordinates;
         }
 
-        const winningColumnCoordinates = checkColumn(y, mark);
+        const winningColumnCoordinates = checkColumn(lastMove);
         if (winningColumnCoordinates) {
             return winningColumnCoordinates;
         }
 
-        const winningDiagonalCoordinates = checkDiagonal({ x, y }, mark);
+        const winningDiagonalCoordinates = checkDiagonal(lastMove);
         if (winningDiagonalCoordinates) {
             return winningDiagonalCoordinates;
         }
 
-        const winningAntiDiagonalCoordinates = checkAntiDiagonal({ x, y }, mark);
+        const winningAntiDiagonalCoordinates = checkAntiDiagonal(lastMove);
         if (winningAntiDiagonalCoordinates) {
             return winningAntiDiagonalCoordinates;
         }
@@ -849,7 +863,7 @@ function Board(sideSize) {
         return turnCount >= sideSize * 2 - 1;
     }
 
-    function checkRow(x, mark) {
+    function checkRow({ x, mark }) {
         const winningCoordinates = [];
         for (let i = 0; i < sideSize; ++i) {
             if (board[x][i] !== mark) {
@@ -864,7 +878,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkColumn(y, mark) {
+    function checkColumn({ y, mark }) {
         const winningCoordinates = [];
         for (let i = 0; i < sideSize; ++i) {
             if (board[i][y] !== mark) {
@@ -879,7 +893,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkDiagonal({ x, y }, mark) {
+    function checkDiagonal({ x, y, mark }) {
         if (x === y) {
             const winningCoordinates = [];
             for (let i = 0; i < sideSize; ++i) {
@@ -896,7 +910,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkAntiDiagonal({ x, y }, mark) {
+    function checkAntiDiagonal({ x, y, mark }) {
         if (x + y === sideSize - 1) {
             const winningCoordinates = [];
             for (let i = 0; i < sideSize; ++i) {
@@ -924,6 +938,7 @@ function Board(sideSize) {
         getAvailableCoordinates,
         clearBoard,
         makeMove,
+        undoMove,
         cellNumberToCoordinates,
         coordinatesToCellNumber,
         checkForWinner,
@@ -954,31 +969,111 @@ function Player(name, mark) {
 }
 
 function Bot(name, mark, difficulty) {
+    const MAXIMIZER_MARK = 'X';
+    const MINIMIZER_MARK = 'O';
+
     const isBot = () => true;
     const getDifficulty = () => difficulty;
 
     function makeMove(boardController) {
+        let coordinates = null;
+        switch (difficulty) {
+            case 'easy':
+                coordinates = getRandomCoordinates(boardController);
+                break;
+            case 'medium': // FALL THROUGH FOR NOW
+            case 'impossible':
+                coordinates = getBestCoordinates(boardController);
+                break;
+            // no default
+        }
+        boardController.makeMove(coordinates, mark);
+        return coordinates;
+    }
+
+    function getRandomCoordinates(boardController) {
         const availableCoordinates = boardController.getAvailableCoordinates();
         if (availableCoordinates.length === 0) {
             return null;
         }
 
         let coordinates = null;
-
         if (availableCoordinates.length === 1) {
             // eslint-disable-next-line prefer-destructuring
             coordinates = availableCoordinates[0];
         } else {
             coordinates = availableCoordinates[getRandomNumber(availableCoordinates.length)];
         }
-
-        boardController.makeMove(coordinates, mark);
-
         return coordinates;
     }
 
     function getRandomNumber(maxNum) {
         return Math.floor(Math.random() * maxNum);
+    }
+
+    function getBestCoordinates(boardController) {
+        const isMaximizer = MAXIMIZER_MARK === mark;
+        let bestScore = 0;
+        if (isMaximizer) {
+            bestScore = -Infinity;
+        } else {
+            bestScore = +Infinity;
+        }
+        let bestCoordinates = null;
+
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        for (const availableCoordinate of availableCoordinates) {
+            boardController.makeMove(availableCoordinate, mark);
+
+            const score = minimax(boardController, !isMaximizer);
+            if (isMaximizer) {
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCoordinates = availableCoordinate;
+                }
+            } else {
+                // eslint-disable-next-line no-lonely-if
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestCoordinates = availableCoordinate;
+                }
+            }
+
+            boardController.undoMove();
+        }
+
+        return bestCoordinates;
+    }
+
+    function minimax(boardController, isMaximizer) {
+        if (boardController.checkForWinner()) {
+            return isMaximizer ? -10 : +10;
+        }
+
+        if (boardController.checkForDraw()) {
+            return 0;
+        }
+
+        let bestScore = null;
+        let comparingFunction = null;
+        if (isMaximizer) {
+            bestScore = -Infinity;
+            comparingFunction = Math.max;
+        } else {
+            bestScore = +Infinity;
+            comparingFunction = Math.min;
+        }
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        for (const availableCoordinate of availableCoordinates) {
+            boardController.makeMove(
+                availableCoordinate,
+                isMaximizer ? MAXIMIZER_MARK : MINIMIZER_MARK
+            );
+            const score = minimax(boardController, !isMaximizer);
+            bestScore = comparingFunction(score, bestScore);
+            boardController.undoMove();
+        }
+        return bestScore;
     }
 
     const prototype = Player(name, mark);
