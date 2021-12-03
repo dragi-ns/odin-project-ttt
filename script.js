@@ -1045,9 +1045,9 @@ function Bot(name, mark, difficulty) {
         return bestCoordinates;
     }
 
-    function minimax(boardController, isMaximizer) {
+    function minimax(boardController, isMaximizer, depth = 0, alpha = -Infinity, beta = +Infinity) {
         if (boardController.checkForWinner()) {
-            return isMaximizer ? -10 : +10;
+            return isMaximizer ? -10 + depth : +10 - depth;
         }
 
         if (boardController.checkForDraw()) {
@@ -1069,9 +1069,20 @@ function Bot(name, mark, difficulty) {
                 availableCoordinate,
                 isMaximizer ? MAXIMIZER_MARK : MINIMIZER_MARK
             );
-            const score = minimax(boardController, !isMaximizer);
-            bestScore = comparingFunction(score, bestScore);
+            const score = minimax(boardController, !isMaximizer, depth + 1, alpha, beta);
             boardController.undoMove();
+
+            bestScore = comparingFunction(score, bestScore);
+
+            if (isMaximizer) {
+                alpha = comparingFunction(bestScore, alpha);
+            } else {
+                beta = comparingFunction(bestScore, beta);
+            }
+
+            if (beta <= alpha) {
+                break;
+            }
         }
         return bestScore;
     }
