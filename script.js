@@ -284,6 +284,12 @@
                 'Player 2'
             );
 
+            let boardSideSize = +gameSettingsForm['board-size'].value.trim();
+            if (Number.isNaN(boardSideSize) || !VALID_BOARD_SIDE_SIZES.includes(boardSideSize)) {
+                boardSideSize = 3;
+            }
+
+            state.boardController = Board(boardSideSize);
             state.playerX = Player(playerXName, 'X');
             state.playerO = Player(playerOName, 'O');
         } else {
@@ -314,6 +320,8 @@
                 // no default
             }
 
+            state.boardController = Board(3);
+
             if (playerMark === 'X') {
                 state.playerX = Player(playerName, playerMark);
                 state.playerO = Bot(botName, 'O', botDifficulty);
@@ -322,18 +330,6 @@
                 state.playerO = Player(playerName, playerMark);
             }
         }
-
-        let boardSideSize = +gameSettingsForm['board-size'].value.trim();
-        if (Number.isNaN(boardSideSize) || !VALID_BOARD_SIDE_SIZES.includes(boardSideSize)) {
-            boardSideSize = 3;
-        }
-
-        // DISABLE BOARDS BIGGER THAN 3X3 FOR VS AI FOR NOW
-        if (gameMode === 'vs-ai') {
-            boardSideSize = 3;
-        }
-
-        state.boardController = Board(boardSideSize);
 
         startGame();
     }
@@ -1050,6 +1046,12 @@ function Bot(name, mark, difficulty) {
         return bestCoordinates;
     }
 
+    /* TODO: Optimize minimax algorithm further to support larger boards (4x4, 5x5).
+             I thought that the minimax with alpha-beta pruning would do the trick but
+             it's inefficient for larger boards.
+             https://larswaechter.medium.com/improving-minimax-performance-fc82bc337dfd
+             https://stackoverflow.com/a/51430688
+    */
     function minimax(boardController, isMaximizer, depth = 0, alpha = -Infinity, beta = +Infinity) {
         if (boardController.checkForWinner()) {
             return isMaximizer ? -10 + depth : +10 - depth;
