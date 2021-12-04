@@ -5,7 +5,9 @@
 
 ### Desktop
 
-![desktop-landing-screenshot](screenshots/desktop-landing.png)
+![desktop-landing-vs-friend-screenshot](screenshots/desktop-landing-vs-friend.png)
+
+![desktop-landing-vs-ai-screenshot](screenshots/desktop-landing-vs-ai.png)
 
 ![desktop-in-game-screenshot](screenshots/desktop-in-game.png)
 
@@ -13,7 +15,9 @@
 
 ### Mobile
 
-![mobile-landing-screenshot](screenshots/mobile-landing.png)
+![mobile-landing-vs-friend-screenshot](screenshots/mobile-landing-vs-friend.png)
+
+![mobile-landing-vs-ai-screenshot](screenshots/mobile-landing-vs-ai.png)
 
 ![mobile-in-game-screenshot](screenshots/mobile-in-game.png)
 
@@ -23,4 +27,4 @@
 
 ## Demo
 
-TODO
+![mobile-demo](demo/mobile-demo.gif)
