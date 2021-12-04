@@ -981,7 +981,13 @@ function Bot(name, mark, difficulty) {
             case 'easy':
                 coordinates = getRandomCoordinates(boardController);
                 break;
-            case 'medium': // FALL THROUGH FOR NOW
+            case 'medium':
+                if (Math.random() > 0.70) {
+                    coordinates = getRandomCoordinates(boardController);
+                } else {
+                    coordinates = getBestCoordinates(boardController);
+                }
+                break;
             case 'impossible':
                 coordinates = getBestCoordinates(boardController);
                 break;
