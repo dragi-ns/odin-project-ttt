@@ -24,6 +24,14 @@
         <div class="container v-center">
             <form id="game-settings" class="form" action="#">
                 <div class="form-field">
+                    <div class="radios">
+                        <input type="radio" name="game-mode" id="vs-friend" value="vs-friend" checked>
+                        <label for="vs-friend">vs friend</label>
+                        <input type="radio" name="game-mode" id="vs-ai" value="vs-ai">
+                        <label for="vs-ai">vs ai</label>
+                    </div>
+                </div>
+                <div class="form-field friend">
                     <label for="player-x-name">Player X name</label>
                     <input type="text"
                            name="player-x-name"
@@ -34,7 +42,7 @@
                            autofocus>
                     <p class="note">Max 16 characters</p>
                 </div><!-- .form-field -->
-                <div class="form-field">
+                <div class="form-field friend">
                     <label for="player-o-name">Player O name</label>
                     <input type="text"
                            name="player-o-name"
@@ -44,7 +52,38 @@
                            autocomplete="off">
                     <p class="note">Max 16 characters</p>
                 </div><!-- .form-field -->
-                <div class="form-field">
+                <div class="form-field ai hide">
+                    <label for="player-name">Player name</label>
+                    <input type="text"
+                           name="player-name"
+                           id="player-name"
+                           maxlength="16"
+                           placeholder="Player 1"
+                           autocomplete="off"
+                           autofocus>
+                    <p class="note">Max 16 characters</p>
+                </div><!-- .form-field -->
+                <div class="form-field ai hide">
+                    <label>Player mark</label>
+                    <div class="radios">
+                        <input type="radio" name="player-mark" id="X" value="X" checked>
+                        <label for="X">X</label>
+                        <input type="radio" name="player-mark" id="O" value="O">
+                        <label for="O">O</label>
+                    </div>
+                </div><!-- .form-field -->
+                <div class="form-field ai hide">
+                    <label>Bot difficulty</label>
+                    <div class="radios">
+                        <input type="radio" name="bot-difficulty" id="easy" value="easy">
+                        <label for="easy">Easy</label>
+                        <input type="radio" name="bot-difficulty" id="medium" value="medium" checked>
+                        <label for="medium">Medium</label>
+                        <input type="radio" name="bot-difficulty" id="impossible" value="impossible">
+                        <label for="impossible">Impossible</label>
+                    </div>
+                </div><!-- .form-field -->
+                <div class="form-field friend">
                     <label>Board size</label>
                     <div class="radios">
                         <input type="radio" name="board-size" id="3x3" value="3" checked>

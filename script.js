@@ -68,6 +68,9 @@
         }
     };
     const MAX_NAME_LENGTH = 16;
+    const VALID_GAME_MODES = ['vs-friend', 'vs-ai'];
+    const VALID_MARKS = ['X', 'O'];
+    const VALID_BOT_DIFFICULTIES = ['easy', 'medium', 'impossible'];
     const VALID_BOARD_SIDE_SIZES = [3, 4, 5];
 
     // ELEMENTS
@@ -76,6 +79,10 @@
     const footer = document.querySelector('footer');
 
     const gameSettingsForm = document.querySelector('#game-settings');
+    const vsFriendRadio = gameSettingsForm.querySelector('#vs-friend');
+    const friendFormFields = gameSettingsForm.querySelectorAll('.form-field.friend');
+    const vsAiRadio = gameSettingsForm.querySelector('#vs-ai');
+    const aiFormFields = gameSettingsForm.querySelectorAll('.form-field.ai');
     const startGameButton = gameSettingsForm.querySelector('.start-game');
 
     const gameContainer = document.querySelector('#game-container');
@@ -115,10 +122,11 @@
     };
 
     const playerContainerDebounceFunction = debounce(handlePlayerContainer, 500, true);
-    const boardDebounceFunction = debounce(handleBoardClick, 150, true);
 
     // EVENT LISTENERS
     window.addEventListener('resize', debounce(handleWindowResize, 250));
+    vsFriendRadio.addEventListener('change', handleGameModeChange);
+    vsAiRadio.addEventListener('change', handleGameModeChange);
     startGameButton.addEventListener(
         'click',
         debounce(handleGameSettingsForm, 500, true)
@@ -156,6 +164,8 @@
         debounce(handleInGameMenuModalActionNewGame, 500, true)
     );
 
+    handleGameModeChange();
+
     // Good explanation of debounce function - https://www.youtube.com/watch?v=LZb_Bv81vQs
     // https://css-tricks.com/debouncing-throttling-explained-examples/
     function debounce(fn, delay, leading = false) {
@@ -184,6 +194,16 @@
         togglePlayerContainerEventListener();
         toggleHeaderFooterVisibility();
         adjustCellFontSize();
+    }
+
+    function handleGameModeChange() {
+        if (vsFriendRadio.checked) {
+            aiFormFields.forEach(hideElement);
+            friendFormFields.forEach(showElement);
+        } else if (vsAiRadio.checked) {
+            friendFormFields.forEach(hideElement);
+            aiFormFields.forEach(showElement);
+        }
     }
 
     function togglePlayerContainerEventListener() {
@@ -249,22 +269,67 @@
             return;
         }
 
-        const playerXName = formatPlayerName(
-            gameSettingsForm['player-x-name'].value.trim(),
-            'Player 1'
-        );
-        const playerOName = formatPlayerName(
-            gameSettingsForm['player-o-name'].value.trim(),
-            'Player 2'
-        );
-        let boardSideSize = +gameSettingsForm['board-size'].value.trim();
-        if (Number.isNaN(boardSideSize) || !VALID_BOARD_SIDE_SIZES.includes(boardSideSize)) {
-            boardSideSize = 3;
+        const gameMode = gameSettingsForm['game-mode'].value.trim();
+        if (!VALID_GAME_MODES.includes(gameMode)) {
+            return;
         }
 
-        state.boardController = Board(boardSideSize);
-        state.playerX = Player(playerXName, 'X');
-        state.playerO = Player(playerOName, 'O');
+        if (gameMode === 'vs-friend') {
+            const playerXName = formatPlayerName(
+                gameSettingsForm['player-x-name'].value.trim(),
+                'Player 1'
+            );
+            const playerOName = formatPlayerName(
+                gameSettingsForm['player-o-name'].value.trim(),
+                'Player 2'
+            );
+
+            let boardSideSize = +gameSettingsForm['board-size'].value.trim();
+            if (Number.isNaN(boardSideSize) || !VALID_BOARD_SIDE_SIZES.includes(boardSideSize)) {
+                boardSideSize = 3;
+            }
+
+            state.boardController = Board(boardSideSize);
+            state.playerX = Player(playerXName, 'X');
+            state.playerO = Player(playerOName, 'O');
+        } else {
+            const playerName = formatPlayerName(
+                gameSettingsForm['player-name'].value.trim(),
+                'Player 1'
+            );
+            let playerMark = gameSettingsForm['player-mark'].value.trim();
+            if (!VALID_MARKS.includes(playerMark)) {
+                playerMark = 'X';
+            }
+
+            let botDifficulty = gameSettingsForm['bot-difficulty'].value.trim();
+            if (!VALID_BOT_DIFFICULTIES.includes(botDifficulty)) {
+                botDifficulty = 'medium';
+            }
+            let botName = null;
+            switch (botDifficulty) {
+                case 'easy':
+                    botName = 'Noobot';
+                    break;
+                case 'medium':
+                    botName = 'Rubotium';
+                    break;
+                case 'impossible':
+                    botName = 'Probot';
+                    break;
+                // no default
+            }
+
+            state.boardController = Board(3);
+
+            if (playerMark === 'X') {
+                state.playerX = Player(playerName, playerMark);
+                state.playerO = Bot(botName, 'O', botDifficulty);
+            } else {
+                state.playerX = Bot(botName, 'X', botDifficulty);
+                state.playerO = Player(playerName, playerMark);
+            }
+        }
 
         startGame();
     }
@@ -288,8 +353,11 @@
         await hideLandingElements();
         await showInGameElements();
         togglePlayerContainerEventListener();
-        board.addEventListener('click', boardDebounceFunction);
-        board.addEventListener('keydown', boardDebounceFunction);
+        if (state.playerX.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function generateBoardCells() {
@@ -389,7 +457,28 @@
         board.classList.add('active');
     }
 
-    function handleBoardClick(event) {
+    function enableBoardCellSelection() {
+        board.addEventListener('click', handleBoardCellSelection);
+        board.addEventListener('keydown', handleBoardCellSelection);
+    }
+
+    async function handleBotMove() {
+        const coordinates = state.currentPlayer.makeMove(state.boardController);
+        const cellNumber = state.boardController.coordinatesToCellNumber(coordinates);
+        const targetCell = state.cellElements.find((cellElement) => {
+            return +cellElement.dataset.cellNumber === cellNumber;
+        });
+        await sleep(350);
+        markMove(targetCell);
+    }
+
+    function sleep(wait) {
+        // https://stackoverflow.com/a/39914235
+        // eslint-disable-next-line no-promise-executor-return
+        return new Promise((resolve) => setTimeout(resolve, wait));
+    }
+
+    function handleBoardCellSelection(event) {
         if (event.type !== 'click' && (event.type !== 'keydown' || event.key !== 'Enter')) {
             return;
         }
@@ -406,7 +495,6 @@
         if (targetCell.classList.contains('marked')) {
             return;
         }
-        targetCell.classList.add('marked');
 
         const coordinates = state.boardController.cellNumberToCoordinates(
             targetCell.dataset.cellNumber
@@ -416,20 +504,41 @@
             return;
         }
 
-        const targetCellSpan = targetCell.children[0];
-        targetCellSpan.textContent = state.currentPlayer.getMark();
-        targetCellSpan.animate(
+        disableBoardCellSelection();
+
+        markMove(targetCell, coordinates);
+    }
+
+    function disableBoardCellSelection() {
+        board.removeEventListener('click', handleBoardCellSelection);
+        board.removeEventListener('keydown', handleBoardCellSelection);
+    }
+
+    async function markMove(cell) {
+        cell.classList.add('marked');
+
+        const cellSpan = cell.children[0];
+        cellSpan.textContent = state.currentPlayer.getMark();
+        await cellSpan.animate(
             ZOOM_ANIMATIONS.IN,
             ZOOM_ANIMATIONS.TIMING
-        );
+        ).finished;
 
-        const winningCoordinates = state.boardController.checkForWinner(
-            coordinates,
-            state.currentPlayer.getMark()
-        );
+        if (checkForEnd()) {
+            return;
+        }
+
+        updateActivePlayer();
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
+    }
+
+    function checkForEnd() {
+        const winningCoordinates = state.boardController.checkForWinner();
         if (winningCoordinates) {
-            board.removeEventListener('click', handleBoardClick);
-
             const winningCellNumbers = winningCoordinates.map(
                 state.boardController.coordinatesToCellNumber
             );
@@ -443,16 +552,15 @@
 
             updatePlayerScore();
             showRoundStatusModal(`${state.currentPlayer.getFormatedString()} WON!`);
-            return;
+            return true;
         }
 
         if (state.boardController.checkForDraw()) {
-            board.removeEventListener('click', handleBoardClick);
             showRoundStatusModal('DRAW!');
-            return;
+            return true;
         }
 
-        updateActivePlayer();
+        return false;
     }
 
     function updatePlayerScore() {
@@ -489,8 +597,11 @@
         closeModal(roundStatusModal, roundStatusModalCard);
         clearBoard();
         updateActivePlayer(true);
-        board.addEventListener('click', boardDebounceFunction);
-        board.addEventListener('keydown', boardDebounceFunction);
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     async function closeModal(modal, modalCard) {
@@ -599,6 +710,11 @@
     function handleGameContainerOptionResetBoard() {
         clearBoard();
         updateActivePlayer(true);
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function handleGameContainerOptionNewGame() {
@@ -620,12 +736,26 @@
 function Board(sideSize) {
     let turnCount = 0;
     const board = [];
+    const lastMoves = [];
     const totalSize = sideSize * sideSize;
 
     initializeBoard();
 
+    const getSideSize = () => sideSize;
     const getBoard = () => board.slice(0);
     const getFlatBoard = () => board.flat();
+
+    function getAvailableCoordinates() {
+        const availableCoordinates = [];
+        for (let i = 0; i < sideSize; ++i) {
+            for (let j = 0; j < sideSize; ++j) {
+                if (board[i][j] === '') {
+                    availableCoordinates.push({ x: i, y: j });
+                }
+            }
+        }
+        return availableCoordinates;
+    }
 
     function initializeBoard() {
         for (let i = 0; i < sideSize; ++i) {
@@ -650,8 +780,17 @@ function Board(sideSize) {
             return false;
         }
         board[x][y] = mark;
+        lastMoves.push({ x, y, mark });
         ++turnCount;
         return true;
+    }
+
+    function undoMove() {
+        if (lastMoves.length !== 0) {
+            const lastMove = lastMoves.pop();
+            board[lastMove.x][lastMove.y] = '';
+            --turnCount;
+        }
     }
 
     function validMove({ x, y }) {
@@ -685,28 +824,30 @@ function Board(sideSize) {
         return (x >= 0 && x < sideSize) && (y >= 0 && y < sideSize);
     }
 
-    function checkForWinner({ x, y }, mark) {
+    function checkForWinner() {
         // https://stackoverflow.com/a/1056352
-        if (!shouldCheckForWinner() || !validCoordinates({ x, y })) {
+        if (!shouldCheckForWinner()) {
             return null;
         }
 
-        const winningRowCoordinates = checkRow(x, mark);
+        const lastMove = lastMoves[lastMoves.length - 1];
+
+        const winningRowCoordinates = checkRow(lastMove);
         if (winningRowCoordinates) {
             return winningRowCoordinates;
         }
 
-        const winningColumnCoordinates = checkColumn(y, mark);
+        const winningColumnCoordinates = checkColumn(lastMove);
         if (winningColumnCoordinates) {
             return winningColumnCoordinates;
         }
 
-        const winningDiagonalCoordinates = checkDiagonal({ x, y }, mark);
+        const winningDiagonalCoordinates = checkDiagonal(lastMove);
         if (winningDiagonalCoordinates) {
             return winningDiagonalCoordinates;
         }
 
-        const winningAntiDiagonalCoordinates = checkAntiDiagonal({ x, y }, mark);
+        const winningAntiDiagonalCoordinates = checkAntiDiagonal(lastMove);
         if (winningAntiDiagonalCoordinates) {
             return winningAntiDiagonalCoordinates;
         }
@@ -718,7 +859,7 @@ function Board(sideSize) {
         return turnCount >= sideSize * 2 - 1;
     }
 
-    function checkRow(x, mark) {
+    function checkRow({ x, mark }) {
         const winningCoordinates = [];
         for (let i = 0; i < sideSize; ++i) {
             if (board[x][i] !== mark) {
@@ -733,7 +874,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkColumn(y, mark) {
+    function checkColumn({ y, mark }) {
         const winningCoordinates = [];
         for (let i = 0; i < sideSize; ++i) {
             if (board[i][y] !== mark) {
@@ -748,7 +889,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkDiagonal({ x, y }, mark) {
+    function checkDiagonal({ x, y, mark }) {
         if (x === y) {
             const winningCoordinates = [];
             for (let i = 0; i < sideSize; ++i) {
@@ -765,7 +906,7 @@ function Board(sideSize) {
         return null;
     }
 
-    function checkAntiDiagonal({ x, y }, mark) {
+    function checkAntiDiagonal({ x, y, mark }) {
         if (x + y === sideSize - 1) {
             const winningCoordinates = [];
             for (let i = 0; i < sideSize; ++i) {
@@ -787,10 +928,13 @@ function Board(sideSize) {
     }
 
     return {
+        getSideSize,
         getBoard,
         getFlatBoard,
+        getAvailableCoordinates,
         clearBoard,
         makeMove,
+        undoMove,
         cellNumberToCoordinates,
         coordinatesToCellNumber,
         checkForWinner,
@@ -801,6 +945,7 @@ function Board(sideSize) {
 function Player(name, mark) {
     let score = 0;
 
+    const isBot = () => false;
     const getName = () => name;
     const getMark = () => mark;
     const getScore = () => score;
@@ -809,6 +954,7 @@ function Player(name, mark) {
     const getFormatedString = () => `${name} (${mark})`;
 
     return {
+        isBot,
         getName,
         getMark,
         getScore,
@@ -816,4 +962,146 @@ function Player(name, mark) {
         resetScore,
         getFormatedString
     };
+}
+
+function Bot(name, mark, difficulty) {
+    const MAXIMIZER_MARK = 'X';
+    const MINIMIZER_MARK = 'O';
+
+    const isBot = () => true;
+    const getDifficulty = () => difficulty;
+
+    function makeMove(boardController) {
+        let coordinates = null;
+        switch (difficulty) {
+            case 'easy':
+                coordinates = getRandomCoordinates(boardController);
+                break;
+            case 'medium':
+                if (Math.random() > 0.70) {
+                    coordinates = getRandomCoordinates(boardController);
+                } else {
+                    coordinates = getBestCoordinates(boardController);
+                }
+                break;
+            case 'impossible':
+                coordinates = getBestCoordinates(boardController);
+                break;
+            // no default
+        }
+        boardController.makeMove(coordinates, mark);
+        return coordinates;
+    }
+
+    function getRandomCoordinates(boardController) {
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        if (availableCoordinates.length === 0) {
+            return null;
+        }
+
+        let coordinates = null;
+        if (availableCoordinates.length === 1) {
+            // eslint-disable-next-line prefer-destructuring
+            coordinates = availableCoordinates[0];
+        } else {
+            coordinates = availableCoordinates[getRandomNumber(availableCoordinates.length)];
+        }
+        return coordinates;
+    }
+
+    function getRandomNumber(maxNum) {
+        return Math.floor(Math.random() * maxNum);
+    }
+
+    function getBestCoordinates(boardController) {
+        const isMaximizer = MAXIMIZER_MARK === mark;
+        let bestScore = 0;
+        if (isMaximizer) {
+            bestScore = -Infinity;
+        } else {
+            bestScore = +Infinity;
+        }
+        let bestCoordinates = null;
+
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        for (const availableCoordinate of availableCoordinates) {
+            boardController.makeMove(availableCoordinate, mark);
+            const score = minimax(boardController, !isMaximizer);
+            boardController.undoMove();
+
+            if (isMaximizer) {
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCoordinates = availableCoordinate;
+                }
+            } else {
+                // eslint-disable-next-line no-lonely-if
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestCoordinates = availableCoordinate;
+                }
+            }
+        }
+
+        return bestCoordinates;
+    }
+
+    /* TODO: Optimize minimax algorithm further to support larger boards (4x4, 5x5).
+             I thought that the minimax with alpha-beta pruning would do the trick but
+             it's inefficient for larger boards.
+             https://larswaechter.medium.com/improving-minimax-performance-fc82bc337dfd
+             https://stackoverflow.com/a/51430688
+    */
+    function minimax(boardController, isMaximizer, depth = 0, alpha = -Infinity, beta = +Infinity) {
+        if (boardController.checkForWinner()) {
+            return isMaximizer ? -10 + depth : +10 - depth;
+        }
+
+        if (boardController.checkForDraw()) {
+            return 0;
+        }
+
+        let bestScore = null;
+        let comparingFunction = null;
+        if (isMaximizer) {
+            bestScore = -Infinity;
+            comparingFunction = Math.max;
+        } else {
+            bestScore = +Infinity;
+            comparingFunction = Math.min;
+        }
+        const availableCoordinates = boardController.getAvailableCoordinates();
+        for (const availableCoordinate of availableCoordinates) {
+            boardController.makeMove(
+                availableCoordinate,
+                isMaximizer ? MAXIMIZER_MARK : MINIMIZER_MARK
+            );
+            const score = minimax(boardController, !isMaximizer, depth + 1, alpha, beta);
+            boardController.undoMove();
+
+            bestScore = comparingFunction(score, bestScore);
+
+            if (isMaximizer) {
+                alpha = comparingFunction(bestScore, alpha);
+            } else {
+                beta = comparingFunction(bestScore, beta);
+            }
+
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return bestScore;
+    }
+
+    const prototype = Player(name, mark);
+    return Object.assign(
+        {},
+        prototype,
+        {
+            isBot,
+            getDifficulty,
+            makeMove
+        }
+    );
 }
