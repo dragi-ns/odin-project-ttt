@@ -1024,8 +1024,9 @@ function Bot(name, mark, difficulty) {
         const availableCoordinates = boardController.getAvailableCoordinates();
         for (const availableCoordinate of availableCoordinates) {
             boardController.makeMove(availableCoordinate, mark);
-
             const score = minimax(boardController, !isMaximizer);
+            boardController.undoMove();
+
             if (isMaximizer) {
                 if (score > bestScore) {
                     bestScore = score;
@@ -1038,8 +1039,6 @@ function Bot(name, mark, difficulty) {
                     bestCoordinates = availableCoordinate;
                 }
             }
-
-            boardController.undoMove();
         }
 
         return bestCoordinates;
