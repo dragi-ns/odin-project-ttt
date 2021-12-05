@@ -133,7 +133,7 @@
     );
     gameContainerOptionClearBoard.addEventListener(
         'click',
-        debounce(handleGameContainerOptionResetBoard, 500, true)
+        debounce(handleGameContainerOptionClearBoard, 500, true)
     );
     gameContainerOptionNewGame.addEventListener(
         'click',
@@ -157,7 +157,7 @@
     );
     inGameMenuModalActionClearBoard.addEventListener(
         'click',
-        debounce(handleInGameMenuModalActionResetBoard, 500, true)
+        debounce(handleInGameMenuModalActionClearBoard, 500, true)
     );
     inGameMenuModalActionNewGame.addEventListener(
         'click',
@@ -707,7 +707,7 @@
         state.cellElements = [];
     }
 
-    function handleGameContainerOptionResetBoard() {
+    function handleGameContainerOptionClearBoard() {
         clearBoard();
         updateActivePlayer(true);
         if (state.currentPlayer.isBot()) {
@@ -721,10 +721,15 @@
         endGame();
     }
 
-    function handleInGameMenuModalActionResetBoard() {
+    function handleInGameMenuModalActionClearBoard() {
         closeModal(inGameMenuModal, inGameMenuModalCard);
         clearBoard();
         updateActivePlayer(true);
+        if (state.currentPlayer.isBot()) {
+            handleBotMove();
+        } else {
+            enableBoardCellSelection();
+        }
     }
 
     function handleInGameMenuModalActionNewGame() {
